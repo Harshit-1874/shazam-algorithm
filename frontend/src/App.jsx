@@ -1,35 +1,37 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React, { useState } from 'react';
+import AudioRecorder from './components/AudioRecorder';
+import Results from './components/Results';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [isRecording, setIsRecording] = useState(false);
+  const [matchResult, setMatchResult] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div className="app-container">
+      <header>
+        <h1>Shazam Clone</h1>
+        <p>Record audio to identify songs</p>
+      </header>
+
+      <main>
+        <AudioRecorder
+          isRecording={isRecording}
+          setIsRecording={setIsRecording}
+          setMatchResult={setMatchResult}
+          setIsLoading={setIsLoading}
+          setError={setError}
+        />
+        
+        {isLoading && <div className="loading">Identifying song...</div>}
+        
+        {error && <div className="error">{error}</div>}
+        
+        {matchResult && <Results result={matchResult} />}
+      </main>
+    </div>
+  );
 }
 
-export default App
+export default App;
