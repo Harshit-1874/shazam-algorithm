@@ -8,11 +8,17 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Reset the results
+  const resetResults = () => {
+    setMatchResult(null);
+    setError(null);
+  };
+
   return (
     <div className="app-container">
       <header>
         <h1>Shazam Clone</h1>
-        <p>Record audio to identify songs</p>
+        <p>Tap the button and let's identify what's playing</p>
       </header>
 
       <main>
@@ -22,6 +28,7 @@ function App() {
           setMatchResult={setMatchResult}
           setIsLoading={setIsLoading}
           setError={setError}
+          resetResults={resetResults}
         />
         
         {isLoading && <div className="loading">Identifying song...</div>}

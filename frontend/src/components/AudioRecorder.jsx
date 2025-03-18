@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { identifySong } from '../services/api';
 
 const AudioRecorder = ({ 
@@ -6,19 +6,55 @@ const AudioRecorder = ({
   setIsRecording, 
   setMatchResult, 
   setIsLoading, 
-  setError 
+  setError,
+  resetResults
 }) => {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const timerRef = useRef(null);
+
+  // Clean up when component unmounts
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+      stopRecording();
+    };
+  }, []);
+
+  // Reset timer when recording state changes
+  useEffect(() => {
+    if (isRecording) {
+      setRecordingTime(0);
+      timerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+    } else if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+    
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [isRecording]);
 
   const startRecording = async () => {
     try {
       // Reset states
-      setMatchResult(null);
-      setError(null);
+      resetResults();
       
       // Get media stream
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        } 
+      });
       
       // Create media recorder
       const mediaRecorder = new MediaRecorder(stream);
@@ -33,6 +69,14 @@ const AudioRecorder = ({
       };
       
       mediaRecorder.onstop = async () => {
+        // Stop all audio tracks
+        stream.getTracks().forEach(track => track.stop());
+        
+        if (audioChunksRef.current.length === 0) {
+          setError("No audio recorded. Please try again.");
+          return;
+        }
+
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
         await sendAudioForIdentification(audioBlob);
       };
@@ -49,7 +93,7 @@ const AudioRecorder = ({
       }, 10000);
     } catch (err) {
       console.error('Error accessing microphone:', err);
-      setError('Could not access microphone. Please check permissions.');
+      setError('Could not access microphone. Please check permissions and try again.');
     }
   };
   
@@ -73,24 +117,30 @@ const AudioRecorder = ({
     }
   };
 
+  // Format seconds to mm:ss
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const secs = (seconds % 60).toString().padStart(2, '0');
+    return `${mins}:${secs}`;
+  };
+
   return (
     <div className="audio-recorder">
-      {!isRecording ? (
-        <button 
-          className="record-button"
-          onClick={startRecording}
-        >
-          Listen
-        </button>
-      ) : (
-        <button 
-          className="stop-button"
-          onClick={stopRecording}
-        >
-          Stop
-        </button>
-      )}
       {isRecording && <div className="pulse-animation"></div>}
+      
+      <button 
+        className={isRecording ? "stop-button" : "record-button"}
+        onClick={isRecording ? stopRecording : startRecording}
+        disabled={setIsLoading}
+      >
+        {isRecording ? "Stop" : "Listen"}
+      </button>
+      
+      {isRecording && (
+        <div className="recording-time">
+          {formatTime(recordingTime)} / 00:10
+        </div>
+      )}
     </div>
   );
 };
